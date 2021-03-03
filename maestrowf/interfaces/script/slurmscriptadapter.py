@@ -38,6 +38,7 @@ from maestrowf.abstracts.enums import JobStatusCode, State, SubmissionCode, \
     CancelCode
 from maestrowf.interfaces.script import CancellationRecord, SubmissionRecord
 from maestrowf.utils import start_process
+from perfflowaspect.aspect import critical_path
 
 LOGGER = logging.getLogger(__name__)
 
@@ -47,6 +48,7 @@ class SlurmScriptAdapter(SchedulerScriptAdapter):
 
     key = "slurm"
 
+    @critical_path(pointcut="around")
     def __init__(self, **kwargs):
         """
         Initialize an instance of the SlurmScriptAdapter.
@@ -108,6 +110,7 @@ class SlurmScriptAdapter(SchedulerScriptAdapter):
         self._extension = ".slurm.sh"
         self._unsupported = set(["cmd", "depends", "ntasks", "nodes"])
 
+    @critical_path(pointcut="around")
     def get_header(self, step):
         """
         Generate the header present at the top of Slurm execution scripts.
@@ -158,6 +161,7 @@ class SlurmScriptAdapter(SchedulerScriptAdapter):
 
         return "\n".join(modified_header)
 
+    @critical_path(pointcut="around")
     def get_parallelize_command(self, procs, nodes=None, **kwargs):
         """
         Generate the SLURM parallelization segement of the command line.
@@ -196,6 +200,7 @@ class SlurmScriptAdapter(SchedulerScriptAdapter):
 
         return " ".join(args)
 
+    @critical_path(pointcut="around")
     def submit(self, step, path, cwd, job_map=None, env=None):
         """
         Submit a script to the Slurm scheduler.
@@ -239,6 +244,7 @@ class SlurmScriptAdapter(SchedulerScriptAdapter):
                 "Submission returned an error (see next line).\n%s", err)
             return SubmissionRecord(SubmissionCode.ERROR, retcode)
 
+    @critical_path(pointcut="around")
     def check_jobs(self, joblist):
         """
         For the given job list, query execution status.
@@ -305,6 +311,7 @@ class SlurmScriptAdapter(SchedulerScriptAdapter):
                          "encountered.")
             return JobStatusCode.ERROR, status
 
+    @critical_path(pointcut="around")
     def cancel_jobs(self, joblist):
         """
         For the given job list, cancel each job.
@@ -330,6 +337,7 @@ class SlurmScriptAdapter(SchedulerScriptAdapter):
 
         return _record
 
+    @critical_path(pointcut="around")
     def _state(self, slurm_state):
         """
         Map a scheduler specific job state to a Study.State enum.
@@ -357,6 +365,7 @@ class SlurmScriptAdapter(SchedulerScriptAdapter):
         else:
             return State.UNKNOWN
 
+    @critical_path(pointcut="around")
     def _write_script(self, ws_path, step):
         """
         Write a Slurm script to the workspace of a workflow step.

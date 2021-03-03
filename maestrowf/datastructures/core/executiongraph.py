@@ -16,6 +16,7 @@ from maestrowf.datastructures.environment import Variable
 from maestrowf.interfaces import ScriptAdapterFactory
 from maestrowf.utils import create_parentdir, get_duration, \
     round_datetime_seconds
+from perfflowaspect.aspect import critical_path
 
 LOGGER = logging.getLogger(__name__)
 SOURCE = "_source"
@@ -65,10 +66,12 @@ class _StepRecord:
         self._end_time = None
         self.status = kwargs.get("status", State.INITIALIZED)
 
+    @critical_path(pointcut="around")
     def setup_workspace(self):
         """Initialize the record's workspace."""
         create_parentdir(self.workspace.value)
 
+    @critical_path(pointcut="around")
     def generate_script(self, adapter, tmp_dir=""):
         """
         Generate the script for executing the workflow step.
@@ -90,6 +93,7 @@ class _StepRecord:
         LOGGER.info("Script: %s\nRestart: %s\nScheduled?: %s",
                     self.script, self.restart_script, self.to_be_scheduled)
 
+    @critical_path(pointcut="around")
     def execute(self, adapter):
         self.mark_submitted()
         retcode, jobid = self._execute(adapter, self.script)
@@ -119,6 +123,7 @@ class _StepRecord:
 
         return False
 
+    @critical_path(pointcut="around")
     def _execute(self, adapter, script):
         if self.to_be_scheduled:
             srecord = adapter.submit(
@@ -376,6 +381,7 @@ class ExecutionGraph(DAG, PickleInterface):
         if self._tmp_dir and not os.path.exists(self._tmp_dir):
             self._tmp_dir = tempfile.mkdtemp()
 
+    @critical_path(pointcut="around")
     def add_step(self, name, step, workspace, restart_limit):
         """
         Add a StepRecord to the ExecutionGraph.
@@ -489,6 +495,7 @@ class ExecutionGraph(DAG, PickleInterface):
             desc
         )
 
+    @critical_path(pointcut="around")
     def generate_scripts(self):
         """
         Generate the scripts for all steps in the ExecutionGraph.
@@ -519,6 +526,7 @@ class ExecutionGraph(DAG, PickleInterface):
             record.setup_workspace()
             record.generate_script(adapter, self._tmp_dir)
 
+    @critical_path(pointcut="around")
     def _execute_record(self, record, adapter, restart=False):
         """
         Execute a StepRecord.
@@ -599,6 +607,7 @@ class ExecutionGraph(DAG, PickleInterface):
         LOGGER.debug("After execution of '%s' -- New state is %s.",
                      record.name, record.status)
 
+    @critical_path(pointcut="around")
     def write_status(self, path):
         """Write the status of the DAG to a CSV file."""
         header = "Step Name,Job ID,Workspace,State,Run Time,Elapsed Time," \
@@ -632,6 +641,7 @@ class ExecutionGraph(DAG, PickleInterface):
         except Timeout:
             pass
 
+    @critical_path(pointcut="around")
     def _check_study_completion(self):
         # We cancelled, return True marking study as complete.
         if self.is_canceled:
@@ -659,6 +669,7 @@ class ExecutionGraph(DAG, PickleInterface):
 
         return StudyStatus.RUNNING
 
+    @critical_path(pointcut="around")
     def execute_ready_steps(self):
         """
         Execute any steps whose dependencies are satisfied.
@@ -873,6 +884,7 @@ class ExecutionGraph(DAG, PickleInterface):
         completion_status = self._check_study_completion()
         return completion_status
 
+    @critical_path(pointcut="around")
     def check_study_status(self):
         """
         Check the status of currently executing steps in the graph.
@@ -910,6 +922,7 @@ class ExecutionGraph(DAG, PickleInterface):
             LOGGER.error(msg)
             return retcode, step_status
 
+    @critical_path(pointcut="around")
     def cancel_study(self):
         """Cancel the study."""
         joblist = []
@@ -935,6 +948,7 @@ class ExecutionGraph(DAG, PickleInterface):
 
         return crecord.cancel_status
 
+    @critical_path(pointcut="around")
     def cleanup(self):
         """Clean up output produced by the ExecutionGraph."""
         if self._tmp_dir:
